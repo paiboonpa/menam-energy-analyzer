@@ -1,0 +1,2057 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menam Power Quality Monitoring Dashboard</title>
+    <!-- Tailwind CSS: https://tailwindcss.com/ -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js: https://www.chartjs.org/ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <!-- PapaParse for CSV reading -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+        }
+        .kpi-card {
+            transition: all 0.3s ease-in-out;
+        }
+        .kpi-card.alert {
+            border-color: #ef4444; /* red-500 */
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+        }
+        .language-toggle {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .language-toggle:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .language-toggle.active-th .lang-th,
+        .language-toggle.active-en .lang-en {
+            font-weight: 700;
+            color: #3b82f6;
+        }
+        .tab-button {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 2px solid #e5e7eb;
+            background: white;
+            transition: all 0.3s ease;
+        }
+        .tab-button:hover {
+            background: #f3f4f6;
+        }
+        .tab-button.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-6 lg:p-8">
+        <!-- Header -->
+        <header class="mb-6 flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900" data-lang-key="dashboard_title">Menam Power Quality Dashboard</h1>
+                <p class="text-gray-600" data-lang-key="dashboard_subtitle">Real-time overview, status display, and recommendations</p>
+            </div>
+            <div class="language-toggle active-en" onclick="toggleLanguage()">
+                <span class="lang-th">TH</span>
+                <span class="text-gray-400">|</span>
+                <span class="lang-en">EN</span>
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="bg-white p-4 rounded-xl shadow-md mb-6">
+            <div class="flex gap-2 flex-wrap">
+                <button class="tab-button active" onclick="switchTab('overview')">Overview</button>
+                <button class="tab-button" onclick="switchTab('sub1')">Sub 1</button>
+                <button class="tab-button" onclick="switchTab('sub2')">Sub 2</button>
+                <button class="tab-button" onclick="switchTab('sub3')">Sub 3</button>
+                <button class="tab-button" onclick="switchTab('sub4')">Sub 4</button>
+                <button class="tab-button" onclick="switchTab('sub5')">Sub 5</button>
+                <button class="tab-button" onclick="switchTab('sub6')">Sub 6</button>
+                <button class="tab-button" onclick="switchTab('sub7')">Sub 7</button>
+                <button class="tab-button" onclick="switchTab('sub8')">Sub 8</button>
+            </div>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview-tab" class="tab-content active">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+            <!-- Card: KPIs -->
+            <div class="bg-white p-6 rounded-xl shadow-md col-span-1 sm:col-span-2 lg:col-span-4">
+                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="col-span-1">
+                        <h2 class="text-lg font-semibold mb-4" data-lang-key="overall_status">Overall Status</h2>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600" data-lang-key="gateway_status">Gateway Status</span>
+                                <span id="gateway-status" class="font-bold text-green-500 flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                    Online
+                                </span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600" data-lang-key="meter_count">Number of Meters</span>
+                                <span id="meter-count" class="font-bold">5</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600" data-lang-key="alert_meters">Alert Meters</span>
+                                <span id="alert-meters" class="font-bold text-red-500">0</span>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Card: Voltage -->
+                    <div id="voltage-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent">
+                        <h2 class="text-lg font-semibold mb-2" data-lang-key="voltage_title">Voltage (V)</h2>
+                        <p id="voltage-value" class="text-4xl font-bold">230.5</p>
+                        <p id="voltage-status" class="text-gray-500" data-status-key="normal">Status: Normal</p>
+                    </div>
+
+                    <!-- Card: Power Factor -->
+                    <div id="pf-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent">
+                        <h2 class="text-lg font-semibold mb-2" data-lang-key="pf_title">Power Factor (P.F.)</h2>
+                        <p id="pf-value" class="text-4xl font-bold">0.95</p>
+                        <p id="pf-status" class="text-gray-500" data-status-key="good">Status: Good</p>
+                    </div>
+                    
+                    <!-- Card: THD -->
+                    <div id="thd-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent">
+                        <h2 class="text-lg font-semibold mb-2" data-lang-key="thd_title">Total Harmonic Distortion (THD)</h2>
+                        <p id="thd-value" class="text-4xl font-bold">2.1%</p>
+                        <p id="thd-status" class="text-gray-500" data-status-key="within_limits">Status: Within Limits</p>
+                    </div>
+                 </div>
+            </div>
+
+            <!-- Chart: กราฟแรงดันไฟฟ้า -->
+            <div class="bg-white p-6 rounded-xl shadow-md col-span-1 md:col-span-2" style="height: 500px; padding-bottom: 50px">
+                <h2 class="text-lg font-semibold mb-4" data-lang-key="voltage_chart_title">Voltage Chart (V) - Last 1 minute</h2>
+                <canvas id="voltageChart"></canvas>
+            </div>
+
+            <!-- Chart: กราฟการใช้พลังงาน -->
+            <div class="bg-white p-6 rounded-xl shadow-md col-span-1 md:col-span-2" style="height: 500px; padding-bottom: 50px">
+                <h2 class="text-lg font-semibold mb-4" data-lang-key="power_chart_title">Power Consumption Chart (kW) - Last 1 minute</h2>
+                <canvas id="powerChart"></canvas>
+            </div>
+            
+            <!-- Table: บันทึกเหตุการณ์ -->
+            <div class="bg-white p-6 rounded-xl shadow-md col-span-1 md:col-span-2 lg:col-span-4">
+                <h2 class="text-lg font-semibold mb-4" data-lang-key="event_log_title">Event Log</h2>
+                <div class="overflow-x-auto max-h-96">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="time">Time</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="meter">Meter</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="event">Event</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="measured_value">Measured Value</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="recommendation">Initial Recommendation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="event-log-body" class="bg-white divide-y divide-gray-200">
+                           <!-- Rows will be added dynamically -->
+                            <tr>
+                                <td colspan="5" class="px-6 py-4 text-center text-gray-500" data-lang-key="no_events">No abnormal events yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Summary & Expected Results Section -->
+            <div class="bg-white p-6 rounded-xl shadow-md col-span-1 sm:col-span-2 lg:col-span-4">
+                <h2 class="text-xl font-bold mb-4 text-center text-gray-800" data-lang-key="summary_title">Summary and Expected Results</h2>
+                
+                <!-- Environmental Impact -->
+                <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-semibold text-center text-gray-700" data-lang-key="environmental_impact">Environmental Impact</h3>
+                    <p class="text-center text-sm text-gray-600 mt-1">
+                        <span data-lang-key="environmental_desc">If all recommendations are implemented, electrical system losses can be reduced, which helps reduce carbon dioxide emissions (Carbon Footprint) by approximately <strong class="text-green-600">5-10%</strong> according to ISO 14064-1 assessment standards</span>
+                    </p>
+                </div>
+            
+                <!-- Separator -->
+                <hr class="my-4 border-gray-200">
+            
+                <!-- Expected Results -->
+                <div id="expected-results-section" class="hidden">
+                    <h3 class="font-semibold text-center text-gray-700" data-lang-key="expected_results">Expected Results After Correction (Average from Events Found)</h3>
+                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                        <!-- Expected PF -->
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-500" data-lang-key="pf_improved">P.F. improved to</p>
+                            <p id="expected-pf" class="text-2xl font-bold text-green-700">> 0.98</p>
+                        </div>
+                        <!-- Expected THD -->
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-500" data-lang-key="thdi_reduced">THDi reduced to</p>
+                            <p id="expected-thd" class="text-2xl font-bold text-green-700">< 5 %</p>
+                        </div>
+                        <!-- Expected Loss Reduction -->
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-500" data-lang-key="loss_reduction">System Losses Reduced</p>
+                            <p id="expected-loss-reduction" class="text-2xl font-bold text-green-700">0.00 kW</p>
+                        </div>
+                        <!-- Expected Carbon Reduction -->
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-500" data-lang-key="carbon_reduction">Carbon Footprint/Year Reduced</p>
+                            <p id="expected-carbon-reduction" class="text-2xl font-bold text-green-700">0.00 tCO2e</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Sub1-8 Tabs -->
+        <div id="sub1-tab" class="tab-content">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                <div id="sub1-voltage-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+                    <h2 class="text-lg font-semibold mb-2">Voltage (V)</h2>
+                    <p id="sub1-voltage" class="text-4xl font-bold">-</p>
+                    <p id="sub1-voltage-status" class="text-gray-500">Average</p>
+                </div>
+                <div id="sub1-pf-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+                    <h2 class="text-lg font-semibold mb-2">Power Factor</h2>
+                    <p id="sub1-pf" class="text-4xl font-bold">-</p>
+                    <p id="sub1-pf-status" class="text-gray-500">Average</p>
+                </div>
+                <div id="sub1-thd-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+                    <h2 class="text-lg font-semibold mb-2">THD (%)</h2>
+                    <p id="sub1-thd" class="text-4xl font-bold">-</p>
+                    <p id="sub1-thd-status" class="text-gray-500">Average</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Voltage Chart (V)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub1-voltage-chart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Power Chart (kW)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub1-power-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Event Log for Sub1 -->
+            <div class="bg-white p-6 rounded-xl shadow-md mb-6">
+                <h2 class="text-lg font-semibold mb-4" data-lang-key="event_log_title">Event Log</h2>
+                <div class="overflow-x-auto max-h-96">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="time">Time</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="event">Event</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="measured_value">Measured Value</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="recommendation">Recommendation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sub1-event-log" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="4" class="px-6 py-4 text-center text-gray-500" data-lang-key="no_events">No abnormal events detected</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Summary & Expected Results for Sub1 -->
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-xl font-bold mb-4 text-center text-gray-800" data-lang-key="summary_title">Summary and Expected Results</h2>
+                <div id="sub1-expected-results" class="hidden">
+                    <h3 class="font-semibold text-center text-gray-700 mb-3" data-lang-key="expected_results">Expected Results After Correction</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-500" data-lang-key="pf_improved">P.F. improved to</p>
+                            <p id="sub1-expected-pf" class="text-2xl font-bold text-green-700">> 0.98</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-500" data-lang-key="thdi_reduced">THDi reduced to</p>
+                            <p id="sub1-expected-thd" class="text-2xl font-bold text-green-700">< 5 %</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-500" data-lang-key="loss_reduction">System Losses Reduced</p>
+                            <p id="sub1-expected-loss" class="text-2xl font-bold text-green-700">0.00 kW</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-500" data-lang-key="carbon_reduction">Carbon Footprint/Year Reduced</p>
+                            <p id="sub1-expected-carbon" class="text-2xl font-bold text-green-700">0.00 tCO2e</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<!-- Template for Sub2-8 tabs - Copy this structure for each tab -->
+<div id="sub2-tab" class="tab-content">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div id="sub2-voltage-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Voltage (V)</h2>
+            <p id="sub2-voltage" class="text-4xl font-bold">-</p>
+            <p id="sub2-voltage-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub2-pf-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Power Factor</h2>
+            <p id="sub2-pf" class="text-4xl font-bold">-</p>
+            <p id="sub2-pf-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub2-thd-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">THD (%)</h2>
+            <p id="sub2-thd" class="text-4xl font-bold">-</p>
+            <p id="sub2-thd-status" class="text-gray-500">Average</p>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Voltage Chart (V)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub2-voltage-chart"></canvas>
+                    </div>
+                </div>
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Power Chart (kW)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub2-power-chart"></canvas>
+                    </div>
+                </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-6">
+        <h2 class="text-lg font-semibold mb-4" data-lang-key="event_log_title">Event Log</h2>
+        <div class="overflow-x-auto max-h-96">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="time">Time</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="event">Event</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="measured_value">Measured Value</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="recommendation">Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody id="sub2-event-log" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-gray-500" data-lang-key="no_events">No abnormal events detected</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Summary & Expected Results -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-bold mb-4 text-center text-gray-800" data-lang-key="summary_title">Summary and Expected Results</h2>
+        <div id="sub2-expected-results" class="hidden">
+            <h3 class="font-semibold text-center text-gray-700 mb-3" data-lang-key="expected_results">Expected Results After Correction</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="pf_improved">P.F. improved to</p>
+                    <p id="sub2-expected-pf" class="text-2xl font-bold text-green-700">> 0.98</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="thdi_reduced">THDi reduced to</p>
+                    <p id="sub2-expected-thd" class="text-2xl font-bold text-green-700">< 5 %</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="loss_reduction">System Losses Reduced</p>
+                    <p id="sub2-expected-loss" class="text-2xl font-bold text-green-700">0.00 kW</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="carbon_reduction">Carbon Footprint/Year Reduced</p>
+                    <p id="sub2-expected-carbon" class="text-2xl font-bold text-green-700">0.00 tCO2e</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Template for Sub2-8 tabs - Copy this structure for each tab -->
+<div id="sub3-tab" class="tab-content">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div id="sub3-voltage-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Voltage (V)</h2>
+            <p id="sub3-voltage" class="text-4xl font-bold">-</p>
+            <p id="sub3-voltage-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub3-pf-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Power Factor</h2>
+            <p id="sub3-pf" class="text-4xl font-bold">-</p>
+            <p id="sub3-pf-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub3-thd-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">THD (%)</h2>
+            <p id="sub3-thd" class="text-4xl font-bold">-</p>
+            <p id="sub3-thd-status" class="text-gray-500">Average</p>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Voltage Chart (V)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub3-voltage-chart"></canvas>
+                    </div>
+                </div>
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Power Chart (kW)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub3-power-chart"></canvas>
+                    </div>
+                </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-6">
+        <h2 class="text-lg font-semibold mb-4" data-lang-key="event_log_title">Event Log</h2>
+        <div class="overflow-x-auto max-h-96">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="time">Time</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="event">Event</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="measured_value">Measured Value</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="recommendation">Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody id="sub3-event-log" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-gray-500" data-lang-key="no_events">No abnormal events detected</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Summary & Expected Results -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-bold mb-4 text-center text-gray-800" data-lang-key="summary_title">Summary and Expected Results</h2>
+        <div id="sub3-expected-results" class="hidden">
+            <h3 class="font-semibold text-center text-gray-700 mb-3" data-lang-key="expected_results">Expected Results After Correction</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="pf_improved">P.F. improved to</p>
+                    <p id="sub3-expected-pf" class="text-2xl font-bold text-green-700">> 0.98</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="thdi_reduced">THDi reduced to</p>
+                    <p id="sub3-expected-thd" class="text-2xl font-bold text-green-700">< 5 %</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="loss_reduction">System Losses Reduced</p>
+                    <p id="sub3-expected-loss" class="text-2xl font-bold text-green-700">0.00 kW</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="carbon_reduction">Carbon Footprint/Year Reduced</p>
+                    <p id="sub3-expected-carbon" class="text-2xl font-bold text-green-700">0.00 tCO2e</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Template for Sub2-8 tabs - Copy this structure for each tab -->
+<div id="sub4-tab" class="tab-content">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div id="sub4-voltage-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Voltage (V)</h2>
+            <p id="sub4-voltage" class="text-4xl font-bold">-</p>
+            <p id="sub4-voltage-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub4-pf-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Power Factor</h2>
+            <p id="sub4-pf" class="text-4xl font-bold">-</p>
+            <p id="sub4-pf-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub4-thd-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">THD (%)</h2>
+            <p id="sub4-thd" class="text-4xl font-bold">-</p>
+            <p id="sub4-thd-status" class="text-gray-500">Average</p>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Voltage Chart (V)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub4-voltage-chart"></canvas>
+                    </div>
+                </div>
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Power Chart (kW)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub4-power-chart"></canvas>
+                    </div>
+                </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-6">
+        <h2 class="text-lg font-semibold mb-4" data-lang-key="event_log_title">Event Log</h2>
+        <div class="overflow-x-auto max-h-96">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="time">Time</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="event">Event</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="measured_value">Measured Value</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="recommendation">Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody id="sub4-event-log" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-gray-500" data-lang-key="no_events">No abnormal events detected</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Summary & Expected Results -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-bold mb-4 text-center text-gray-800" data-lang-key="summary_title">Summary and Expected Results</h2>
+        <div id="sub4-expected-results" class="hidden">
+            <h3 class="font-semibold text-center text-gray-700 mb-3" data-lang-key="expected_results">Expected Results After Correction</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="pf_improved">P.F. improved to</p>
+                    <p id="sub4-expected-pf" class="text-2xl font-bold text-green-700">> 0.98</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="thdi_reduced">THDi reduced to</p>
+                    <p id="sub4-expected-thd" class="text-2xl font-bold text-green-700">< 5 %</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="loss_reduction">System Losses Reduced</p>
+                    <p id="sub4-expected-loss" class="text-2xl font-bold text-green-700">0.00 kW</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="carbon_reduction">Carbon Footprint/Year Reduced</p>
+                    <p id="sub4-expected-carbon" class="text-2xl font-bold text-green-700">0.00 tCO2e</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Template for Sub2-8 tabs - Copy this structure for each tab -->
+<div id="sub5-tab" class="tab-content">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div id="sub5-voltage-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Voltage (V)</h2>
+            <p id="sub5-voltage" class="text-4xl font-bold">-</p>
+            <p id="sub5-voltage-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub5-pf-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Power Factor</h2>
+            <p id="sub5-pf" class="text-4xl font-bold">-</p>
+            <p id="sub5-pf-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub5-thd-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">THD (%)</h2>
+            <p id="sub5-thd" class="text-4xl font-bold">-</p>
+            <p id="sub5-thd-status" class="text-gray-500">Average</p>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Voltage Chart (V)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub5-voltage-chart"></canvas>
+                    </div>
+                </div>
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Power Chart (kW)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub5-power-chart"></canvas>
+                    </div>
+                </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-6">
+        <h2 class="text-lg font-semibold mb-4" data-lang-key="event_log_title">Event Log</h2>
+        <div class="overflow-x-auto max-h-96">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="time">Time</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="event">Event</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="measured_value">Measured Value</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="recommendation">Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody id="sub5-event-log" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-gray-500" data-lang-key="no_events">No abnormal events detected</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Summary & Expected Results -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-bold mb-4 text-center text-gray-800" data-lang-key="summary_title">Summary and Expected Results</h2>
+        <div id="sub5-expected-results" class="hidden">
+            <h3 class="font-semibold text-center text-gray-700 mb-3" data-lang-key="expected_results">Expected Results After Correction</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="pf_improved">P.F. improved to</p>
+                    <p id="sub5-expected-pf" class="text-2xl font-bold text-green-700">> 0.98</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="thdi_reduced">THDi reduced to</p>
+                    <p id="sub5-expected-thd" class="text-2xl font-bold text-green-700">< 5 %</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="loss_reduction">System Losses Reduced</p>
+                    <p id="sub5-expected-loss" class="text-2xl font-bold text-green-700">0.00 kW</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="carbon_reduction">Carbon Footprint/Year Reduced</p>
+                    <p id="sub5-expected-carbon" class="text-2xl font-bold text-green-700">0.00 tCO2e</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Template for Sub2-8 tabs - Copy this structure for each tab -->
+<div id="sub6-tab" class="tab-content">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div id="sub6-voltage-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Voltage (V)</h2>
+            <p id="sub6-voltage" class="text-4xl font-bold">-</p>
+            <p id="sub6-voltage-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub6-pf-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Power Factor</h2>
+            <p id="sub6-pf" class="text-4xl font-bold">-</p>
+            <p id="sub6-pf-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub6-thd-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">THD (%)</h2>
+            <p id="sub6-thd" class="text-4xl font-bold">-</p>
+            <p id="sub6-thd-status" class="text-gray-500">Average</p>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Voltage Chart (V)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub6-voltage-chart"></canvas>
+                    </div>
+                </div>
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Power Chart (kW)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub6-power-chart"></canvas>
+                    </div>
+                </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-6">
+        <h2 class="text-lg font-semibold mb-4" data-lang-key="event_log_title">Event Log</h2>
+        <div class="overflow-x-auto max-h-96">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="time">Time</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="event">Event</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="measured_value">Measured Value</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="recommendation">Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody id="sub6-event-log" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-gray-500" data-lang-key="no_events">No abnormal events detected</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Summary & Expected Results -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-bold mb-4 text-center text-gray-800" data-lang-key="summary_title">Summary and Expected Results</h2>
+        <div id="sub6-expected-results" class="hidden">
+            <h3 class="font-semibold text-center text-gray-700 mb-3" data-lang-key="expected_results">Expected Results After Correction</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="pf_improved">P.F. improved to</p>
+                    <p id="sub6-expected-pf" class="text-2xl font-bold text-green-700">> 0.98</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="thdi_reduced">THDi reduced to</p>
+                    <p id="sub6-expected-thd" class="text-2xl font-bold text-green-700">< 5 %</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="loss_reduction">System Losses Reduced</p>
+                    <p id="sub6-expected-loss" class="text-2xl font-bold text-green-700">0.00 kW</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="carbon_reduction">Carbon Footprint/Year Reduced</p>
+                    <p id="sub6-expected-carbon" class="text-2xl font-bold text-green-700">0.00 tCO2e</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Template for Sub2-8 tabs - Copy this structure for each tab -->
+<div id="sub7-tab" class="tab-content">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div id="sub7-voltage-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Voltage (V)</h2>
+            <p id="sub7-voltage" class="text-4xl font-bold">-</p>
+            <p id="sub7-voltage-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub7-pf-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Power Factor</h2>
+            <p id="sub7-pf" class="text-4xl font-bold">-</p>
+            <p id="sub7-pf-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub7-thd-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">THD (%)</h2>
+            <p id="sub7-thd" class="text-4xl font-bold">-</p>
+            <p id="sub7-thd-status" class="text-gray-500">Average</p>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Voltage Chart (V)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub7-voltage-chart"></canvas>
+                    </div>
+                </div>
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Power Chart (kW)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub7-power-chart"></canvas>
+                    </div>
+                </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-6">
+        <h2 class="text-lg font-semibold mb-4" data-lang-key="event_log_title">Event Log</h2>
+        <div class="overflow-x-auto max-h-96">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="time">Time</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="event">Event</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="measured_value">Measured Value</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="recommendation">Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody id="sub7-event-log" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-gray-500" data-lang-key="no_events">No abnormal events detected</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Summary & Expected Results -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-bold mb-4 text-center text-gray-800" data-lang-key="summary_title">Summary and Expected Results</h2>
+        <div id="sub7-expected-results" class="hidden">
+            <h3 class="font-semibold text-center text-gray-700 mb-3" data-lang-key="expected_results">Expected Results After Correction</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="pf_improved">P.F. improved to</p>
+                    <p id="sub7-expected-pf" class="text-2xl font-bold text-green-700">> 0.98</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="thdi_reduced">THDi reduced to</p>
+                    <p id="sub7-expected-thd" class="text-2xl font-bold text-green-700">< 5 %</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="loss_reduction">System Losses Reduced</p>
+                    <p id="sub7-expected-loss" class="text-2xl font-bold text-green-700">0.00 kW</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="carbon_reduction">Carbon Footprint/Year Reduced</p>
+                    <p id="sub7-expected-carbon" class="text-2xl font-bold text-green-700">0.00 tCO2e</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Template for Sub2-8 tabs - Copy this structure for each tab -->
+<div id="sub8-tab" class="tab-content">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div id="sub8-voltage-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Voltage (V)</h2>
+            <p id="sub8-voltage" class="text-4xl font-bold">-</p>
+            <p id="sub8-voltage-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub8-pf-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">Power Factor</h2>
+            <p id="sub8-pf" class="text-4xl font-bold">-</p>
+            <p id="sub8-pf-status" class="text-gray-500">Average</p>
+        </div>
+        <div id="sub8-thd-card" class="kpi-card bg-white p-6 rounded-xl border-2 border-transparent shadow-md">
+            <h2 class="text-lg font-semibold mb-2">THD (%)</h2>
+            <p id="sub8-thd" class="text-4xl font-bold">-</p>
+            <p id="sub8-thd-status" class="text-gray-500">Average</p>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Voltage Chart (V)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub8-voltage-chart"></canvas>
+                    </div>
+                </div>
+        <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-semibold mb-4">Power Chart (kW)</h2>
+                    <div style="height: 320px">
+                        <canvas id="sub8-power-chart"></canvas>
+                    </div>
+                </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-6">
+        <h2 class="text-lg font-semibold mb-4" data-lang-key="event_log_title">Event Log</h2>
+        <div class="overflow-x-auto max-h-96">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="time">Time</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="event">Event</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="measured_value">Measured Value</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-lang-key="recommendation">Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody id="sub8-event-log" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-center text-gray-500" data-lang-key="no_events">No abnormal events detected</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Summary & Expected Results -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-xl font-bold mb-4 text-center text-gray-800" data-lang-key="summary_title">Summary and Expected Results</h2>
+        <div id="sub8-expected-results" class="hidden">
+            <h3 class="font-semibold text-center text-gray-700 mb-3" data-lang-key="expected_results">Expected Results After Correction</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="pf_improved">P.F. improved to</p>
+                    <p id="sub8-expected-pf" class="text-2xl font-bold text-green-700">> 0.98</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="thdi_reduced">THDi reduced to</p>
+                    <p id="sub8-expected-thd" class="text-2xl font-bold text-green-700">< 5 %</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="loss_reduction">System Losses Reduced</p>
+                    <p id="sub8-expected-loss" class="text-2xl font-bold text-green-700">0.00 kW</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-500" data-lang-key="carbon_reduction">Carbon Footprint/Year Reduced</p>
+                    <p id="sub8-expected-carbon" class="text-2xl font-bold text-green-700">0.00 tCO2e</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mapping from column names to API data fields
+        const fieldMapping = {
+            "Voltage LL1": "data01",
+            "Voltage LL2": "data02",
+            "Voltage LL3": "data03",
+            "Current 1": "data04",
+            "Current 2": "data05",
+            "Current 3": "data06",
+            "Power1": "data07",
+            "Power2": "data08",
+            "Power3": "data09",
+            "Total Power": "data10",
+            "Frequency": "data11",
+            "Total PF": "data12",
+            "Voltage LN1": "data13",
+            "Voltage LN2": "data14",
+            "Voltage LN3": "data15",
+            "EXP Energy": "data16",
+            "IMP Energy": "data20",
+            "THD I1": "data27",
+            "THD I2": "data28",
+            "THD I3": "data29",
+            "THD LN1": "data31",
+            "THD LN2": "data32",
+            "THD LN3": "data33",
+            "R Power1": "data34",
+            "R Power2": "data35",
+            "R Power3": "data36",
+            "Total R Power": "data37"
+        };
+
+        // --- CSV Data Storage ---
+        // CSV loading removed — using MDB API only
+        let currentTab = 'overview';
+        let subCharts = {};
+        let subAnomalies = {}; // Store anomalies for each sub
+
+        // --- Configuration Constants ---
+        const VOLTAGE_NORMAL = 230;
+        const VOLTAGE_TOLERANCE = 0.10;
+        const VOLTAGE_SAG_THRESHOLD = VOLTAGE_NORMAL * (1 - VOLTAGE_TOLERANCE);
+        const VOLTAGE_SWELL_THRESHOLD = VOLTAGE_NORMAL * (1 + VOLTAGE_TOLERANCE);
+        const PF_THRESHOLD = 0.85;
+        const THD_THRESHOLD = 5.0;
+        const EMISSION_FACTOR = 0.4998;
+
+        // --- Tab Switching ---
+        function switchTab(tabName) {
+            currentTab = tabName;
+
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // Add active class to selected button
+            event.target.classList.add('active');
+        }
+
+        // CSV file loading removed — using MDB API only via fieldMapping
+
+        // --- Display CSV Data with Charts ---
+        function displayCSVData(subNumber, data) {
+            if (data.length === 0) return;
+
+            console.log(`Displaying data for sub${subNumber}...`);
+
+            // Initialize anomaly tracking for this sub
+            if (!subAnomalies[`sub${subNumber}`]) {
+                subAnomalies[`sub${subNumber}`] = {
+                    pfAnomalies: [],
+                    thdAnomalies: [],
+                    powerAtAnomalies: [],
+                    events: []
+                };
+            }
+
+            // Calculate averages and prepare chart data
+            let voltageSum = 0, pfSum = 0, powerSum = 0, thdSum = 0;
+            let voltageData = [], powerData = [], labels = [];
+            let voltageCount = 0, pfCount = 0, powerCount = 0, thdCount = 0;
+
+            // Sample data for chart (show every 10th point to avoid overcrowding)
+            const sampleRate = Math.max(1, Math.floor(data.length / 100));
+
+            const anomalyData = subAnomalies[`sub${subNumber}`];
+
+            data.forEach((row, index) => {
+                const voltage = parseFloat(row['Voltage LN1'] || row['Voltage LL1'] || 0);
+                const pf = parseFloat(row['Total PF'] || 0);
+                const power = parseFloat(row['Total Power'] || 0);
+                const thd = parseFloat(row['THD I1'] || row['THD I2'] || row['THD I3'] || 0);
+                const timestamp = row['KEY_TIMESTAMP'] || '';
+
+                if (voltage > 0) {
+                    voltageSum += voltage;
+                    voltageCount++;
+                }
+                if (pf > 0) {
+                    pfSum += pf;
+                    pfCount++;
+                }
+                if (power > 0) {
+                    powerSum += power;
+                    powerCount++;
+                }
+                if (thd > 0) {
+                    thdSum += thd;
+                    thdCount++;
+                }
+
+                // Detect anomalies
+                let hasAnomaly = false;
+                if (voltage > 0 && voltage < VOLTAGE_SAG_THRESHOLD) {
+                    anomalyData.events.push({
+                        timestamp: timestamp,
+                        type: 'voltage_sag',
+                        value: voltage,
+                        unit: 'V'
+                    });
+                    hasAnomaly = true;
+                } else if (voltage > VOLTAGE_SWELL_THRESHOLD) {
+                    anomalyData.events.push({
+                        timestamp: timestamp,
+                        type: 'voltage_swell',
+                        value: voltage,
+                        unit: 'V'
+                    });
+                    hasAnomaly = true;
+                }
+
+                if (pf > 0 && pf < PF_THRESHOLD) {
+                    anomalyData.pfAnomalies.push(pf);
+                    anomalyData.events.push({
+                        timestamp: timestamp,
+                        type: 'low_pf',
+                        value: pf,
+                        unit: '',
+                        power: power
+                    });
+                    hasAnomaly = true;
+                }
+
+                if (thd > THD_THRESHOLD) {
+                    anomalyData.thdAnomalies.push(thd);
+                    anomalyData.events.push({
+                        timestamp: timestamp,
+                        type: 'high_thd',
+                        value: thd,
+                        unit: '%',
+                        voltage: voltage,
+                        power: power,
+                        pf: pf
+                    });
+                    hasAnomaly = true;
+                }
+
+                if (hasAnomaly && power > 0) {
+                    anomalyData.powerAtAnomalies.push(power);
+                }
+
+                // Add to chart data
+                if (index % sampleRate === 0) {
+                    // Format date as "1-Sep-2025"
+                    let dateLabel = row['KEY_TIMESTAMP'] || index;
+                    if (typeof dateLabel === 'string' && dateLabel.includes(' ')) {
+                        // Parse date from format "04-09-25 16:48" to "4-Sep-2025"
+                        const datePart = dateLabel.split(' ')[0]; // Get "04-09-25"
+                        const parts = datePart.split('-');
+                        if (parts.length === 3) {
+                            const day = parseInt(parts[0]);
+                            const month = parseInt(parts[1]);
+                            const year = parseInt(parts[2]) + 2000;
+                            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                            dateLabel = `${day}-${monthNames[month - 1]}-${year}`;
+                        }
+                    }
+                    labels.push(dateLabel);
+                    voltageData.push(voltage > 0 ? voltage : null);
+                    powerData.push(power > 0 ? power : null);
+                }
+            });
+
+            // Update KPI cards
+            const avgVoltage = voltageCount > 0 ? voltageSum / voltageCount : 0;
+            const avgPF = pfCount > 0 ? pfSum / pfCount : 0;
+            const avgPower = powerCount > 0 ? powerSum / powerCount : 0;
+            const avgTHD = thdCount > 0 ? thdSum / thdCount : 0;
+
+            console.log(`Sub${subNumber} averages - Voltage: ${avgVoltage.toFixed(1)}, PF: ${avgPF.toFixed(2)}, Power: ${avgPower.toFixed(1)}, THD: ${avgTHD.toFixed(1)}`);
+
+            // Safely update KPI cards
+            const voltageEl = document.getElementById(`sub${subNumber}-voltage`);
+            const pfEl = document.getElementById(`sub${subNumber}-pf`);
+            const thdEl = document.getElementById(`sub${subNumber}-thd`);
+
+            if (voltageEl) voltageEl.textContent = avgVoltage.toFixed(1);
+            if (pfEl) pfEl.textContent = avgPF.toFixed(2);
+            if (thdEl) thdEl.textContent = avgTHD.toFixed(1) + '%';
+
+            // Update KPI status
+            updateKPIStatus(subNumber, avgVoltage, avgPF, avgTHD);
+
+            // Update Event Log
+            updateEventLog(subNumber, anomalyData.events);
+
+            // Update Expected Results
+            updateExpectedResults(subNumber, anomalyData);
+
+            // Create charts
+            console.log(`Creating charts for sub${subNumber} with ${labels.length} data points`);
+            createSubChart(subNumber, 'voltage', labels, voltageData, 'Voltage (V)', 'rgb(75, 192, 192)');
+            createSubChart(subNumber, 'power', labels, powerData, 'Power (kW)', 'rgb(255, 159, 64)');
+        }
+
+        // --- Update KPI Status ---
+        function updateKPIStatus(subNumber, voltage, pf, thd) {
+            const voltageCard = document.getElementById(`sub${subNumber}-voltage-card`);
+            const pfCard = document.getElementById(`sub${subNumber}-pf-card`);
+            const thdCard = document.getElementById(`sub${subNumber}-thd-card`);
+            const voltageStatus = document.getElementById(`sub${subNumber}-voltage-status`);
+            const pfStatus = document.getElementById(`sub${subNumber}-pf-status`);
+            const thdStatus = document.getElementById(`sub${subNumber}-thd-status`);
+
+            // Voltage status
+            if (voltageCard && voltageStatus) {
+                if (voltage < VOLTAGE_SAG_THRESHOLD) {
+                    voltageCard.classList.add('alert');
+                    voltageStatus.textContent = 'Status: Low';
+                    voltageStatus.className = 'text-red-500';
+                } else if (voltage > VOLTAGE_SWELL_THRESHOLD) {
+                    voltageCard.classList.add('alert');
+                    voltageStatus.textContent = 'Status: High';
+                    voltageStatus.className = 'text-red-500';
+                } else {
+                    voltageCard.classList.remove('alert');
+                    voltageStatus.textContent = 'Average';
+                    voltageStatus.className = 'text-gray-500';
+                }
+            }
+
+            // PF status
+            if (pfCard && pfStatus) {
+                if (pf < PF_THRESHOLD) {
+                    pfCard.classList.add('alert');
+                    pfStatus.textContent = 'Status: Below Threshold';
+                    pfStatus.className = 'text-red-500';
+                } else {
+                    pfCard.classList.remove('alert');
+                    pfStatus.textContent = 'Average';
+                    pfStatus.className = 'text-gray-500';
+                }
+            }
+
+            // THD status
+            if (thdCard && thdStatus) {
+                if (thd > THD_THRESHOLD) {
+                    thdCard.classList.add('alert');
+                    thdStatus.textContent = 'Status: Above Threshold';
+                    thdStatus.className = 'text-red-500';
+                } else {
+                    thdCard.classList.remove('alert');
+                    thdStatus.textContent = 'Average';
+                    thdStatus.className = 'text-gray-500';
+                }
+            }
+        }
+
+        // --- Update Event Log ---
+        function updateEventLog(subNumber, events) {
+            const eventLogEl = document.getElementById(`sub${subNumber}-event-log`);
+            if (!eventLogEl) return;
+
+            if (events.length === 0) {
+                eventLogEl.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">No abnormal events detected</td></tr>';
+                return;
+            }
+
+            // Show only last 20 events
+            const recentEvents = events.slice(-20).reverse();
+            eventLogEl.innerHTML = recentEvents.map(event => {
+                let eventName = '';
+                let recommendation = '';
+
+                switch (event.type) {
+                    case 'voltage_sag':
+                        eventName = 'Voltage Sag';
+                        recommendation = 'Check large load operations or power source stability';
+                        break;
+                    case 'voltage_swell':
+                        eventName = 'Voltage Swell';
+                        recommendation = 'Check power source stability';
+                        break;
+                    case 'low_pf':
+                        eventName = 'Low P.F.';
+                        const kvar = event.power * Math.tan(Math.acos(event.value));
+                        recommendation = `Install SVG size ${kvar.toFixed(1)} kVAR`;
+                        break;
+                    case 'high_thd':
+                        eventName = 'High THD';
+                        const current = (event.power * 1000) / (event.voltage * event.pf);
+                        const apfSize = (event.value / 100) * current;
+                        recommendation = `Install APF size ${apfSize.toFixed(1)} A`;
+                        break;
+                }
+
+                return `
+                    <tr class="bg-red-50">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${event.timestamp}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-red-600">${eventName}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${event.value.toFixed(2)} ${event.unit}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-blue-800 font-medium">${recommendation}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // --- Update Expected Results ---
+        function updateExpectedResults(subNumber, anomalyData) {
+            const expectedResultsEl = document.getElementById(`sub${subNumber}-expected-results`);
+            if (!expectedResultsEl) return;
+
+            if (anomalyData.pfAnomalies.length === 0 && anomalyData.thdAnomalies.length === 0) {
+                expectedResultsEl.classList.add('hidden');
+                return;
+            }
+
+            const getAverage = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+
+            const avg_pf_before = anomalyData.pfAnomalies.length > 0 ? getAverage(anomalyData.pfAnomalies) : 0.99;
+            const avg_thd_before = anomalyData.thdAnomalies.length > 0 ? getAverage(anomalyData.thdAnomalies) : 3.0;
+            const avg_power = getAverage(anomalyData.powerAtAnomalies);
+
+            const pf_after = 0.99;
+            const thd_after = 3.0;
+
+            const loss_factor_before = (1 / (avg_pf_before * avg_pf_before)) * (1 + Math.pow(avg_thd_before / 100, 2));
+            const loss_factor_after = (1 / (pf_after * pf_after)) * (1 + Math.pow(thd_after / 100, 2));
+
+            const loss_reduction_percentage = (1 - (loss_factor_after / loss_factor_before));
+            const initial_total_loss_kw = avg_power * 0.04;
+            const saved_kw = initial_total_loss_kw * loss_reduction_percentage;
+
+            const annual_kwh_saved = saved_kw * 24 * 365;
+            const kg_co2e_saved = annual_kwh_saved * EMISSION_FACTOR;
+            const tco2e_saved = kg_co2e_saved / 1000;
+
+            const expectedPfEl = document.getElementById(`sub${subNumber}-expected-pf`);
+            const expectedThdEl = document.getElementById(`sub${subNumber}-expected-thd`);
+            const expectedLossEl = document.getElementById(`sub${subNumber}-expected-loss`);
+            const expectedCarbonEl = document.getElementById(`sub${subNumber}-expected-carbon`);
+
+            if (expectedPfEl) expectedPfEl.textContent = `> ${pf_after}`;
+            if (expectedThdEl) expectedThdEl.textContent = `< ${thd_after}%`;
+            if (expectedLossEl) expectedLossEl.textContent = `${saved_kw.toFixed(2)} kW`;
+            if (expectedCarbonEl) expectedCarbonEl.textContent = `${tco2e_saved.toFixed(2)} tCO2e`;
+
+            expectedResultsEl.classList.remove('hidden');
+        }
+
+        // --- Create Chart for Sub Tabs ---
+        function createSubChart(subNumber, type, labels, data, label, color) {
+            const chartId = `sub${subNumber}-${type}-chart`;
+            const ctx = document.getElementById(chartId);
+
+            if (!ctx) {
+                console.warn(`Canvas element not found: ${chartId}`);
+                return;
+            }
+
+            console.log(`Creating chart: ${chartId}`);
+
+            // Destroy existing chart if exists
+            const chartKey = `sub${subNumber}-${type}`;
+            if (subCharts[chartKey]) {
+                subCharts[chartKey].destroy();
+            }
+
+            try {
+                subCharts[chartKey] = new Chart(ctx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: label,
+                            data: data,
+                            borderColor: color,
+                            backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.2)'),
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                display: true,
+                                ticks: {
+                                    maxTicksLimit: 10,
+                                    autoSkip: true
+                                }
+                            },
+                            y: {
+                                beginAtZero: false
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+                console.log(`Chart created successfully: ${chartId}`);
+            } catch (error) {
+                console.error(`Error creating chart ${chartId}:`, error);
+            }
+        }
+
+        // --- Load All CSV Files ---
+        // --- Adjust Sub Tabs to match mdbUrl length ---
+        function adjustSubTabs() {
+            const count = Math.max(1, mdbUrl.length);
+
+            // Hide or show sub tab content containers
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                const match = tab.id.match(/^sub(\d+)-tab$/);
+                if (match) {
+                    const n = parseInt(match[1], 10);
+                    if (n > count) {
+                        tab.style.display = 'none';
+                    } else {
+                        tab.style.display = '';
+                    }
+                }
+            });
+
+            // Hide tab buttons whose target sub index is greater than count
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                // keep Overview button
+                const txt = (btn.textContent || '').trim().toLowerCase();
+                if (txt === 'overview') return;
+
+                // Try to detect target from onclick: switchTab('subX')
+                const onclick = btn.getAttribute('onclick') || '';
+                let target = null;
+                const m = onclick.match(/switchTab\(['"]([^'"]+)['"]\)/);
+                if (m) target = m[1];
+
+                // Fallback: derive from text like 'Sub 2' -> 'sub2'
+                if (!target) {
+                    const compact = txt.replace(/\s+/g, '');
+                    if (compact.startsWith('sub')) target = compact;
+                }
+
+                if (target) {
+                    const match = target.match(/^sub(\d+)$/);
+                    if (match) {
+                        const n = parseInt(match[1], 10);
+                        if (n > count) btn.style.display = 'none';
+                        else btn.style.display = '';
+                    }
+                }
+            });
+        }
+
+        // --- Load All CSV Files ---
+        // Removed: loading CSV files is disabled. Sub tabs populated from MDB API.
+
+        // CSV overview loading removed — using MDB API only
+
+        // --- Language Translations ---
+        const translations = {
+            en: {
+                dashboard_title: "Menam Power Quality Dashboard",
+                dashboard_subtitle: "Real-time overview, status display, and recommendations",
+                overall_status: "Overall Status",
+                gateway_status: "Gateway Status",
+                meter_count: "Number of Meters",
+                alert_meters: "Alert Meters",
+                voltage_title: "Voltage (V)",
+                pf_title: "Power Factor (P.F.)",
+                thd_title: "Total Harmonic Distortion (THD)",
+                voltage_chart_title: "Voltage Chart (V) - Last 1 minute",
+                power_chart_title: "Power Consumption Chart (kW) - Last 1 minute",
+                event_log_title: "Event Log",
+                time: "Time",
+                meter: "Meter",
+                event: "Event",
+                measured_value: "Measured Value",
+                recommendation: "Initial Recommendation",
+                no_events: "No abnormal events yet",
+                summary_title: "Summary and Expected Results",
+                environmental_impact: "Environmental Impact",
+                environmental_desc: "If all recommendations are implemented, electrical system losses can be reduced, which helps reduce carbon dioxide emissions (Carbon Footprint) by approximately <strong class=\"text-green-600\">5-10%</strong> according to ISO 14064-1 assessment standards",
+                expected_results: "Expected Results After Correction (Average from Events Found)",
+                pf_improved: "P.F. improved to",
+                thdi_reduced: "THDi reduced to",
+                loss_reduction: "System Losses Reduced",
+                carbon_reduction: "Carbon Footprint/Year Reduced",
+                // Status translations
+                status_normal: "Status: Normal",
+                status_good: "Status: Good",
+                status_within_limits: "Status: Within Limits",
+                status_voltage_sag: "Status: Voltage Sag",
+                status_voltage_swell: "Status: Voltage Swell",
+                status_below_threshold: "Status: Below Threshold",
+                status_above_threshold: "Status: Above Threshold",
+                // Event translations
+                event_voltage_sag: "Voltage Sag",
+                event_voltage_swell: "Voltage Swell",
+                event_low_pf: "Low P.F.",
+                event_high_thd: "High THD",
+                // Recommendations
+                rec_voltage: "Check large load operations or power source stability",
+                rec_pf: "Install SVG size {kvar} kVAR to improve P.F.",
+                rec_thd: "Install APF size {size} A to filter harmonics"
+            },
+            th: {
+                dashboard_title: "Menam Dashboard คุณภาพไฟฟ้า",
+                dashboard_subtitle: "แสดงข้อมูลภาพรวมและสถานะแบบเรียลไทม์ พร้อมคำแนะนำ",
+                overall_status: "สถานะโดยรวม",
+                gateway_status: "Gateway Status",
+                meter_count: "จำนวนมิเตอร์",
+                alert_meters: "มิเตอร์ที่แจ้งเตือน",
+                voltage_title: "แรงดันไฟฟ้า (V)",
+                pf_title: "ตัวประกอบกำลัง (P.F.)",
+                thd_title: "ฮาร์มอนิกส์รวม (THD)",
+                voltage_chart_title: "กราฟแรงดันไฟฟ้า (V) - 1 นาทีล่าสุด",
+                power_chart_title: "กราฟการใช้กำลังไฟฟ้า (kW) - 1 นาทีล่าสุด",
+                event_log_title: "บันทึกเหตุการณ์ (Event Log)",
+                time: "เวลา",
+                meter: "มิเตอร์",
+                event: "เหตุการณ์",
+                measured_value: "ค่าที่วัดได้",
+                recommendation: "คำแนะนำเบื้องต้น",
+                no_events: "ยังไม่มีเหตุการณ์ผิดปกติ",
+                summary_title: "สรุปและผลลัพธ์ที่คาดหวัง",
+                environmental_impact: "ผลกระทบต่อสิ่งแวดล้อม",
+                environmental_desc: "หากดำเนินการแก้ไขตามคำแนะนำทั้งหมด จะสามารถลดการสูญเสียในระบบไฟฟ้า ซึ่งช่วยลดการปล่อยก๊าซคาร์บอนไดออกไซด์ (Carbon Footprint) ได้ประมาณ <strong class=\"text-green-600\">5-10%</strong> ตามมาตรฐานการประเมิน ISO 14064-1",
+                expected_results: "ผลลัพธ์ที่คาดว่าจะได้รับหลังการแก้ไข (ค่าเฉลี่ยจากเหตุการณ์ที่พบ)",
+                pf_improved: "P.F. ดีขึ้นเป็น",
+                thdi_reduced: "THDi ลดเหลือ",
+                loss_reduction: "ลด Losses ในระบบ",
+                carbon_reduction: "ลด Carbon Footprint/ปี",
+                // Status translations
+                status_normal: "สถานะ: ปกติ",
+                status_good: "สถานะ: ดี",
+                status_within_limits: "สถานะ: อยู่ในเกณฑ์",
+                status_voltage_sag: "สถานะ: แรงดันตก (Sag)",
+                status_voltage_swell: "สถานะ: แรงดันเกิน (Swell)",
+                status_below_threshold: "สถานะ: ต่ำกว่าเกณฑ์",
+                status_above_threshold: "สถานะ: สูงเกินเกณฑ์",
+                // Event translations
+                event_voltage_sag: "แรงดันตก (Sag)",
+                event_voltage_swell: "แรงดันเกิน (Swell)",
+                event_low_pf: "P.F. ต่ำ",
+                event_high_thd: "THD สูง",
+                // Recommendations
+                rec_voltage: "ตรวจสอบการทำงานของโหลดขนาดใหญ่ หรือความเสถียรของแหล่งจ่ายไฟ",
+                rec_pf: "ติดตั้ง SVG ขนาด {kvar} kVAR เพื่อปรับปรุงค่า P.F.",
+                rec_thd: "ติดตั้ง APF ขนาด {size} A เพื่อกรองฮาร์มอนิก"
+            }
+        };
+
+        let currentLanguage = 'en';
+
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === 'en' ? 'th' : 'en';
+            const toggleBtn = document.querySelector('.language-toggle');
+            toggleBtn.classList.remove('active-en', 'active-th');
+            toggleBtn.classList.add(`active-${currentLanguage}`);
+            updateLanguage();
+        }
+
+        function updateLanguage() {
+            // Update all elements with data-lang-key
+            document.querySelectorAll('[data-lang-key]').forEach(element => {
+                const key = element.getAttribute('data-lang-key');
+                if (translations[currentLanguage][key]) {
+                    element.innerHTML = translations[currentLanguage][key];
+                }
+            });
+
+            // Update HTML lang attribute
+            document.documentElement.lang = currentLanguage;
+        }
+
+        function getTranslation(key, params = {}) {
+            let text = translations[currentLanguage][key] || translations['en'][key] || key;
+            // Replace parameters in the text
+            Object.keys(params).forEach(param => {
+                text = text.replace(`{${param}}`, params[param]);
+            });
+            return text;
+        }
+
+        // --- Configuration for Overview Tab ---
+        const UPDATE_INTERVAL = 300000; // 300 seconds (5 minutes)
+        const MAX_CHART_POINTS = 20; // Show last 20 data points (20 * 3s = 1 minute)
+        const API_KEY = 'quU1UymqLKsBItH9e4YSwJpRkxdvdSXLKG5sqVLO3jJMEtZkiN';
+
+        // --- MDB API URLs ---
+        const mdbUrl = [
+            'https://connect.momohub.net/api/Developer_API/Device_Data/GETLAST_DATAPOINT_ByMacID.php?API_Key='+API_KEY+'&Mac_ID=02:81:03:04:49:93_01',
+            'https://connect.momohub.net/api/Developer_API/Device_Data/GETLAST_DATAPOINT_ByMacID.php?API_Key='+API_KEY+'&Mac_ID=02:81:03:04:49:93_02',
+            'https://connect.momohub.net/api/Developer_API/Device_Data/GETLAST_DATAPOINT_ByMacID.php?API_Key='+API_KEY+'&Mac_ID=02:81:03:04:49:93_03'
+        ];
+
+        // --- DOM Elements ---
+        const voltageValueEl = document.getElementById('voltage-value');
+        const voltageStatusEl = document.getElementById('voltage-status');
+        const voltageCardEl = document.getElementById('voltage-card');
+        
+        const pfValueEl = document.getElementById('pf-value');
+        const pfStatusEl = document.getElementById('pf-status');
+        const pfCardEl = document.getElementById('pf-card');
+
+        const thdValueEl = document.getElementById('thd-value');
+        const thdStatusEl = document.getElementById('thd-status');
+        const thdCardEl = document.getElementById('thd-card');
+
+        const alertMetersEl = document.getElementById('alert-meters');
+        const eventLogBodyEl = document.getElementById('event-log-body');
+
+        // --- Global State for Averaging Anomalies ---
+        let pfAnomalies = [];
+        let thdAnomalies = [];
+        let powerAtAnomalies = [];
+        let hasInitialEvent = true;
+
+        // --- Chart.js Setup ---
+        const createChart = (ctx, label) => {
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: label,
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'second',
+                                displayFormats: {
+                                    second: 'HH:mm:ss'
+                                }
+                            },
+                            ticks: {
+                                maxTicksLimit: 10
+                            }
+                        },
+                        y: {
+                            beginAtZero: false
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        };
+
+        const voltageChart = createChart(document.getElementById('voltageChart').getContext('2d'), 'Voltage (V)');
+        const powerChart = createChart(document.getElementById('powerChart').getContext('2d'), 'Power (kW)');
+        powerChart.data.datasets[0].borderColor = 'rgb(255, 159, 64)';
+        powerChart.data.datasets[0].backgroundColor = 'rgba(255, 159, 64, 0.2)';
+
+
+        // --- Data Simulation & UI Update ---
+        function updateChart(chart, time, value) {
+            chart.data.labels.push(time);
+            chart.data.datasets[0].data.push(value);
+
+            if (chart.data.labels.length > MAX_CHART_POINTS) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+            chart.update('none'); // 'none' for no animation
+        }
+
+        function addEventLog(meter, event, value, unit, recommendation) {
+            if (hasInitialEvent) {
+                eventLogBodyEl.innerHTML = ''; // Clear initial message
+                hasInitialEvent = false;
+            }
+            const time = new Date().toLocaleTimeString('th-TH');
+            const row = document.createElement('tr');
+            row.className = 'bg-red-50';
+            row.innerHTML = `
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${time}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${meter}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-red-600">${event}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${value} ${unit}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-blue-800 font-medium">${recommendation}</td>
+            `;
+            eventLogBodyEl.prepend(row); // Add new event to the top
+        }
+        
+        function getAverage(arr) {
+            if (arr.length === 0) return 0;
+            const sum = arr.reduce((a, b) => a + b, 0);
+            return sum / arr.length;
+        }
+
+        // --- Check if response is wait/delay status ---
+        function isWaitDelayResponse(response) {
+            return response &&
+                   response.status &&
+                   (response.status.includes('Wait') || response.status.includes('wait') ||
+                    response.status.includes('Delay') || response.status.includes('delay'));
+        }
+
+        // --- Safe localStorage operations with error handling ---
+        function setCacheItem(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify({
+                    data: data,
+                    timestamp: Date.now()
+                }));
+                console.log('Cached response with key:', key);
+                return true;
+            } catch (err) {
+                console.warn('Failed to cache response (localStorage may be blocked):', err.message);
+                return false;
+            }
+        }
+
+        function getCacheItem(key) {
+            try {
+                const cached = localStorage.getItem(key);
+                if (cached) {
+                    const cachedData = JSON.parse(cached);
+                    console.log('Using cached data for key:', key);
+                    return cachedData.data;
+                }
+                return null;
+            } catch (err) {
+                console.warn('Failed to retrieve cached data:', err.message);
+                return null;
+            }
+        }
+
+        // --- Fetch data from MDB APIs ---
+        async function fetchMDBData() {
+            try {
+                console.log('Fetching data from', mdbUrl.length, 'MDB APIs...');
+
+                // Fetch all APIs in parallel
+                const promises = mdbUrl.map(url =>
+                    fetch(url)
+                        .then(res => res.json())
+                        .then(response => {
+                            // Check if response is wait/delay status
+                            if (isWaitDelayResponse(response)) {
+                                console.log('Wait/delay response received from', url, '- not caching');
+                                return null;
+                            }
+
+                            // Cache non-wait responses to localStorage
+                            const cacheKey = `mdb_cache_${url}`;
+                            setCacheItem(cacheKey, response);
+
+                            return response;
+                        })
+                        .catch(err => {
+                            console.error('Error fetching from', url, err);
+                            // Try to get cached data if available
+                            const cacheKey = `mdb_cache_${url}`;
+                            const cachedData = getCacheItem(cacheKey);
+                            return cachedData;
+                        })
+                );
+
+                const responses = await Promise.all(promises);
+
+                // Filter out null responses and extract data
+                const validData = responses
+                    .filter(res => res && res.result && res.result.length > 0)
+                    .map(res => res.result[0]);
+
+                if (validData.length === 0) {
+                    console.warn('No valid data received from APIs');
+                    return null;
+                }
+
+                console.log('Received data from', validData.length, 'devices');
+
+                // Calculate averages
+                const voltages = [];
+                const powers = [];
+                const powerFactors = [];
+                const thds = [];
+
+                validData.forEach(data => {
+                    // Voltage LN (Line to Neutral) - data13, data14, data15
+                    const v1 = parseFloat(data.data13) || 0;
+                    const v2 = parseFloat(data.data14) || 0;
+                    const v3 = parseFloat(data.data15) || 0;
+                    if (v1 > 0) voltages.push(v1);
+                    if (v2 > 0) voltages.push(v2);
+                    if (v3 > 0) voltages.push(v3);
+
+                    // Total Power - data30 (in kW)
+                    const totalPower = parseFloat(data.data30) || 0;
+                    if (totalPower > 0) powers.push(totalPower);
+
+                    // Power Factor - data12 (Total PF)
+                    const pf = parseFloat(data.data12) || 0;
+                    // Check if PF is valid (between 0 and 1, or -1 to 1 for leading/lagging)
+                    if (pf !== 0 && Math.abs(pf) <= 1) {
+                        powerFactors.push(Math.abs(pf));
+                    }
+
+                    // THD I (Current) - data34, data35, data36
+                    const thd1 = parseFloat(data.data34) || 0;
+                    const thd2 = parseFloat(data.data35) || 0;
+                    const thd3 = parseFloat(data.data36) || 0;
+                    if (thd1 > 0) thds.push(thd1);
+                    if (thd2 > 0) thds.push(thd2);
+                    if (thd3 > 0) thds.push(thd3);
+                });
+
+                const avgVoltage = getAverage(voltages);
+                const avgPower = getAverage(powers);
+                const avgPF = getAverage(powerFactors);
+                const avgTHD = getAverage(thds);
+
+                console.log('Calculated averages:', {
+                    voltage: avgVoltage.toFixed(2),
+                    power: avgPower.toFixed(2),
+                    pf: avgPF.toFixed(2),
+                    thd: avgTHD.toFixed(2)
+                });
+
+                return {
+                    voltage: avgVoltage,
+                    power: avgPower,
+                    pf: avgPF,
+                    thd: avgTHD,
+                    deviceCount: validData.length
+                };
+
+            } catch (error) {
+                console.error('Error in fetchMDBData:', error);
+                return null;
+            }
+        }
+
+        // --- Map API response to CSV-like row using fieldMapping ---
+        function mapApiToRow(d) {
+            const row = {};
+
+            // timestamp heuristics
+            row['KEY_TIMESTAMP'] = d.timerec || d.time || d.TIMESTAMP || d.timeRecord || new Date().toISOString();
+
+            Object.keys(fieldMapping).forEach(col => {
+                const apiKey = fieldMapping[col];
+                let val = undefined;
+                if (d.hasOwnProperty(apiKey)) val = d[apiKey];
+                else if (d.hasOwnProperty(apiKey.toLowerCase())) val = d[apiKey.toLowerCase()];
+                else if (d.hasOwnProperty(apiKey.toUpperCase())) val = d[apiKey.toUpperCase()];
+
+                // fallback common keys
+                if (val === undefined) {
+                    val = d[apiKey.replace(/^data/, 'data')];
+                }
+
+                // Coerce to number when possible
+                if (val === null || val === undefined || val === '') {
+                    row[col] = 0;
+                } else if (typeof val === 'number') {
+                    row[col] = val;
+                } else if (!isNaN(parseFloat(val))) {
+                    row[col] = parseFloat(val);
+                } else {
+                    row[col] = val;
+                }
+            });
+
+            return row;
+        }
+
+        // --- Fetch each MDB URL and populate corresponding sub tab using fieldMapping ---
+        async function fetchAndDisplayAllSubMDB() {
+            if (!Array.isArray(mdbUrl) || mdbUrl.length === 0) return;
+
+            const promises = mdbUrl.map(url =>
+                fetch(url)
+                    .then(res => res.json())
+                    .then(response => {
+                        // Check if response is wait/delay status
+                        if (isWaitDelayResponse(response)) {
+                            console.log('Wait/delay response received from', url, '- checking for cached data');
+                            // Try to get cached data when wait response is received
+                            const cacheKey = `mdb_cache_${url}`;
+                            const cachedData = getCacheItem(cacheKey);
+                            if (cachedData) {
+                                console.log('Using cached data for', url, 'due to wait response');
+                                return cachedData;
+                            }
+                            return null;
+                        }
+
+                        // Cache non-wait responses to localStorage
+                        const cacheKey = `mdb_cache_${url}`;
+                        setCacheItem(cacheKey, response);
+
+                        return response;
+                    })
+                    .catch(err => {
+                        console.error('Error fetching sub device', url, err);
+                        // Try to get cached data if available
+                        const cacheKey = `mdb_cache_${url}`;
+                        const cachedData = getCacheItem(cacheKey);
+                        if (cachedData) {
+                            console.log('Using cached data for', url, 'due to fetch error');
+                        }
+                        return cachedData;
+                    })
+            );
+
+            const responses = await Promise.all(promises);
+
+            responses.forEach((res, idx) => {
+                const subNumber = idx + 1;
+                if (!res || !res.result || res.result.length === 0) {
+                    console.warn(`No MDB data for sub${subNumber}`);
+                    // Try one more time to get cached data directly
+                    const cacheKey = `mdb_cache_${mdbUrl[idx]}`;
+                    const cachedData = getCacheItem(cacheKey);
+                    if (cachedData && cachedData.result && cachedData.result.length > 0) {
+                        console.log(`Found cached data for sub${subNumber} - using it`);
+                        const d = cachedData.result[0];
+                        const row = mapApiToRow(d);
+                        try {
+                            displayCSVData(subNumber, [row]);
+                        } catch (err) {
+                            console.error(`Error displaying cached MDB data for sub${subNumber}:`, err);
+                        }
+                    }
+                    return;
+                }
+
+                const d = res.result[0];
+                const row = mapApiToRow(d);
+
+                try {
+                    // reuse displayCSVData which expects an array of rows
+                    displayCSVData(subNumber, [row]);
+                    console.log(`Successfully displayed data for sub${subNumber}`);
+                } catch (err) {
+                    console.error(`Error displaying MDB data for sub${subNumber}:`, err);
+                }
+            });
+        }
+
+        async function simulateData() {
+            let alertCount = 0;
+            let anomalyDetectedThisTick = false;
+
+            // Fetch data from MDB APIs
+            let voltage, pf, thd, power;
+
+            const mdbData = await fetchMDBData();
+
+            if (mdbData) {
+                // Use real API data
+                voltage = mdbData.voltage;
+                power = mdbData.power;
+                pf = mdbData.pf;
+                thd = mdbData.thd;
+
+                // Update meter count
+                document.getElementById('meter-count').textContent = mdbData.deviceCount;
+
+                console.log('Using MDB API data:', { voltage, power, pf, thd });
+            } else {
+                // Final fallback to simulation
+                voltage = VOLTAGE_NORMAL + (Math.random() - 0.5) * 10;
+                pf = 0.9 + Math.random() * 0.1;
+                thd = 2.0 + Math.random() * 2;
+                power = 50 + (Math.sin(Date.now() / 30000) + 1) * 25 + (Math.random() - 0.5) * 5;
+
+                if (Math.random() < 0.05) { voltage = VOLTAGE_SAG_THRESHOLD - Math.random() * 10; }
+                else if (Math.random() < 0.02) { voltage = VOLTAGE_SWELL_THRESHOLD + Math.random() * 10; }
+                if (Math.random() < 0.1) { pf = PF_THRESHOLD - Math.random() * 0.15; }
+                if (Math.random() < 0.08) { thd = THD_THRESHOLD + Math.random() * 10; }
+
+                console.log('Using simulated data (API and CSV failed)');
+            }
+
+            // 1. Update Voltage UI and check for events
+            voltageValueEl.textContent = voltage.toFixed(1);
+            if (voltage < VOLTAGE_SAG_THRESHOLD) {
+                voltageStatusEl.textContent = getTranslation('status_voltage_sag');
+                voltageStatusEl.className = 'text-red-500';
+                voltageCardEl.classList.add('alert');
+                addEventLog('Meter-01', getTranslation('event_voltage_sag'), voltage.toFixed(1), 'V', getTranslation('rec_voltage'));
+                alertCount++;
+            } else if (voltage > VOLTAGE_SWELL_THRESHOLD) {
+                voltageStatusEl.textContent = getTranslation('status_voltage_swell');
+                voltageStatusEl.className = 'text-red-500';
+                voltageCardEl.classList.add('alert');
+                addEventLog('Meter-01', getTranslation('event_voltage_swell'), voltage.toFixed(1), 'V', getTranslation('rec_voltage'));
+                alertCount++;
+            } else {
+                voltageStatusEl.textContent = getTranslation('status_normal');
+                voltageStatusEl.className = 'text-gray-500';
+                voltageCardEl.classList.remove('alert');
+            }
+
+            // 2. Update Power Factor UI and check for events
+            pfValueEl.textContent = pf.toFixed(2);
+            if (pf < PF_THRESHOLD) {
+                pfStatusEl.textContent = getTranslation('status_below_threshold');
+                pfStatusEl.className = 'text-red-500';
+                pfCardEl.classList.add('alert');
+                const kvar = power * Math.tan(Math.acos(pf));
+                addEventLog('Meter-03', getTranslation('event_low_pf'), pf.toFixed(2), '', getTranslation('rec_pf', {kvar: kvar.toFixed(1)}));
+                alertCount++;
+                pfAnomalies.push(pf);
+                anomalyDetectedThisTick = true;
+            } else {
+                pfStatusEl.textContent = getTranslation('status_good');
+                pfStatusEl.className = 'text-gray-500';
+                pfCardEl.classList.remove('alert');
+            }
+
+            // 3. Update THD UI and check for events
+            thdValueEl.textContent = thd.toFixed(1) + '%';
+            if (thd > THD_THRESHOLD) {
+                thdStatusEl.textContent = getTranslation('status_above_threshold');
+                thdStatusEl.className = 'text-red-500';
+                thdCardEl.classList.add('alert');
+                const current = (power * 1000) / (voltage * pf);
+                const thdi = thd * 1.2; // Simulate THDi
+                const apfSize = (thdi / 100) * current;
+                addEventLog('Meter-05', getTranslation('event_high_thd'), thd.toFixed(1), '%', getTranslation('rec_thd', {size: apfSize.toFixed(1)}));
+                alertCount++;
+                thdAnomalies.push(thd);
+                anomalyDetectedThisTick = true;
+            } else {
+                thdStatusEl.textContent = getTranslation('status_within_limits');
+                thdStatusEl.className = 'text-gray-500';
+                thdCardEl.classList.remove('alert');
+            }
+            
+            // If any anomaly happened this tick, record the power
+            if(anomalyDetectedThisTick){
+                powerAtAnomalies.push(power);
+            }
+
+            // 4. Update Charts and alert count
+            const now = new Date();
+            updateChart(voltageChart, now, voltage);
+            updateChart(powerChart, now, power);
+            alertMetersEl.textContent = alertCount;
+
+            // 5. Update Expected Results section (if any anomaly has ever occurred)
+            const expectedResultsSection = document.getElementById('expected-results-section');
+            if (pfAnomalies.length > 0 || thdAnomalies.length > 0) {
+                const avg_pf_before = pfAnomalies.length > 0 ? getAverage(pfAnomalies) : 0.99;
+                const avg_thd_before = thdAnomalies.length > 0 ? getAverage(thdAnomalies) : 3.0;
+                const avg_power = getAverage(powerAtAnomalies);
+                
+                const pf_after = 0.99;
+                const thd_after = 3.0;
+                
+                const loss_factor_before = (1 / (avg_pf_before * avg_pf_before)) * (1 + Math.pow(avg_thd_before / 100, 2));
+                const loss_factor_after = (1 / (pf_after * pf_after)) * (1 + Math.pow(thd_after / 100, 2));
+                
+                const loss_reduction_percentage = (1 - (loss_factor_after / loss_factor_before));
+                
+                const initial_total_loss_kw = avg_power * 0.04; // Assume 4% loss on average power during anomalies
+                const saved_kw = initial_total_loss_kw * loss_reduction_percentage;
+                
+                const annual_kwh_saved = saved_kw * 24 * 365;
+                const kg_co2e_saved = annual_kwh_saved * EMISSION_FACTOR;
+                const tco2e_saved = kg_co2e_saved / 1000;
+
+                document.getElementById('expected-pf').textContent = `> ${pf_after}`;
+                document.getElementById('expected-thd').textContent = `< ${thd_after}%`;
+                document.getElementById('expected-loss-reduction').textContent = `${saved_kw.toFixed(2)} kW`;
+                document.getElementById('expected-carbon-reduction').textContent = `${tco2e_saved.toFixed(2)} tCO2e`;
+                
+                expectedResultsSection.classList.remove('hidden');
+            }
+        }
+
+        // --- Initial Load & Interval ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            updateLanguage(); // Set initial language
+
+            // Start simulation immediately, load CSV in background
+            simulateData(); // Initial data load with fallback
+            setInterval(simulateData, UPDATE_INTERVAL);
+
+            // Adjust visible sub tabs to match MDB devices
+            adjustSubTabs();
+
+            // Populate sub tabs from MDB API (real-time)
+            try {
+                await fetchAndDisplayAllSubMDB();
+            } catch (err) {
+                console.error('Error fetching/displaying MDB sub data on load:', err);
+            }
+
+            // Periodically refresh per-sub MDB data
+            setInterval(fetchAndDisplayAllSubMDB, UPDATE_INTERVAL);
+        });
+
+    </script>
+</body>
+</html>
